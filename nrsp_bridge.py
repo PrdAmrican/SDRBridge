@@ -52,7 +52,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 __copyright__ = "Copyright (C) 2026 PrdAmrican and SDRBridge contributors"
 __license__ = "AGPL-3.0-only"
 # AGPL section 13: if you run a MODIFIED version for users over a network,
@@ -875,7 +875,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="check SDRconnect: print its properties, stream IQ for 5 s, report and exit")
     g.add_argument("-v", "--verbose", action="count", default=0)
     g.add_argument("--version", action="version", version=f"SDRBridge {__version__} - {__copyright__}. "
-                   f"License: GNU AGPL v3 (see LICENSE); NO WARRANTY. Source: {SOURCE_URL}")
+                   f"License: GNU AGPL v3 (see LICENSE). NO WARRANTY - use at your own risk "
+                   f"(see DISCLAIMER.md). Source: {SOURCE_URL}")
     return p
 
 

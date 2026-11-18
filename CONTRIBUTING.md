@@ -74,6 +74,9 @@ If your version runs on the internet, a link to it in an issue is welcome.
 
 ## Licensing of contributions
 
+SDRBridge is offered with no warranty (see `DISCLAIMER.md`), and that
+covers your contributions too.
+
 SDRBridge is licensed under the GNU Affero General Public License v3
 (`AGPL-3.0-only`, see `LICENSE`). By contributing, you agree that your
 contribution is licensed under the same terms.

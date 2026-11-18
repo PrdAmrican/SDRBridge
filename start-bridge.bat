@@ -87,6 +87,7 @@ if defined ANTENNA set "ARGS=%ARGS% --antenna "%ANTENNA%""
 echo.
 echo  Starting SDRBridge. In SDR++ choose RTL-TCP, 127.0.0.1, port %RTL_PORT%.
 echo  Press Ctrl+C to stop.
+echo  SDRBridge is free software with NO WARRANTY - use at your own risk (DISCLAIMER.md).
 echo.
 %PY% nrsp_bridge.py %ARGS% %EXTRA% %*
 

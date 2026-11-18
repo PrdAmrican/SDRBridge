@@ -7,6 +7,17 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-18
+
+### Added
+- `DISCLAIMER.md`: use at your own risk, no warranty or liability, and what
+  that means in practice: radio damage from strong RF or lightning,
+  unauthenticated network ports, bandwidth costs, legality of reception,
+  reliability, third-party software, no affiliation with SDRplay, no support
+  obligation.
+- "Use at your own risk" notice near the top of the README, in `--version`,
+  in the Windows launcher and in CONTRIBUTING.md.
+
 ## [1.3.0] - 2026-11-18
 
 ### Changed

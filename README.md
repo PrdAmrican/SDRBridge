@@ -20,6 +20,13 @@ is served by **SDRconnect**, not by the nRSP-ST box itself, so SDRconnect
 (the GUI, or SDRconnect Headless on a Pi/server) must be running and
 connected to the nRSP-ST. The bridge talks to SDRconnect.
 
+> **Use at your own risk.** SDRBridge is free hobby software provided "as
+> is", with **no warranty of any kind**; the authors are not liable for any
+> damage or loss from using it. It does not protect your radio from strong
+> signals or lightning, its network ports have no password, and what you may
+> legally receive depends on where you live. Please read
+> [DISCLAIMER.md](DISCLAIMER.md) before use.
+
 ## Install
 
 Python 3.9+ on Windows, macOS or Linux. Either run the script directly:
@@ -217,7 +224,8 @@ and the source goes along under the same licence. Because the bridge is
 network software, the AGPL also covers running a *changed* version for other
 people over a network: they must be able to get its source (set
 `SOURCE_URL` in `nrsp_bridge.py` to where yours is). It comes with no
-warranty.
+warranty: see [DISCLAIMER.md](DISCLAIMER.md) and sections 15-16 of the
+licence.
 
 SDRplay, SDRconnect and nRSP-ST are trademarks of SDRplay Ltd. SDRBridge is an
 independent project, not affiliated with or endorsed by SDRplay Ltd.
