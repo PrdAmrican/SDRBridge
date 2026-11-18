@@ -7,6 +7,16 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-18
+
+### Added
+- `start-bridge.bat`: Windows launcher. Settings (radio serial, antenna,
+  SDRconnect address, rtl_tcp port, extra options) at the top; finds
+  Python, installs numpy/websockets if missing, offers to stop an old copy
+  of the bridge holding the port, warns if SDRconnect's WebSocket server is
+  not reachable, and passes extra command-line arguments through.
+- `.gitattributes` keeps CRLF line endings for `.bat` files.
+
 ## [1.1.3] - 2026-11-18
 
 ### Fixed

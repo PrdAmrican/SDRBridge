@@ -49,6 +49,13 @@ python3 nrsp_bridge.py -s 192.168.1.50       # SDRconnect elsewhere
 python3 nrsp_bridge.py -s 192.168.1.50 --antenna "Antenna B" -f 100.1M
 ```
 
+On **Windows**, you can instead double-click **`start-bridge.bat`**. Edit
+the settings at its top first (radio serial number, antenna, SDRconnect
+address). It installs the Python packages if needed, offers to stop an old
+copy of the bridge that is still holding the port, warns if SDRconnect's
+WebSocket server isn't reachable, and passes anything you add after its
+name on to the bridge (`start-bridge.bat --antenna "Antenna B" -v`).
+
 Then point your SDR program at the bridge's address:
 
 | Program | How to connect |

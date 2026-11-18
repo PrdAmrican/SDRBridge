@@ -37,7 +37,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.1.3"
+__version__ = "1.2.0"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
