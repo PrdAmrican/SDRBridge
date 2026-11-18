@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# SDRBridge - Copyright (c) 2026 PrdAmrican. All rights reserved.
-# Proprietary and confidential. See COPYRIGHT for terms.
+# SDRBridge - Copyright (C) 2026 PrdAmrican and SDRBridge contributors
+# SPDX-License-Identifier: AGPL-3.0-only
 """End-to-end tests: fake SDRconnect <- bridge -> rtl_tcp / raw clients.
 
     python3 tests/test_bridge.py

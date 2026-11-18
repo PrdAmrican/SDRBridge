@@ -7,6 +7,24 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-18
+
+### Changed
+- **Licence: SDRBridge is now free software under the GNU Affero General
+  Public License v3 (`AGPL-3.0-only`)**, replacing "all rights reserved".
+  Full text in `LICENSE`; the `COPYRIGHT` file is removed. Every source file
+  carries the licence header; `--version`, the start-up log line, the README
+  and `pyproject.toml` state the licence.
+
+### Added
+- `CONTRIBUTING.md`: how to share what you build, report hardware results,
+  run the tests and simulator, coding style, licensing of contributions,
+  and the release process.
+- `AUTHORS.md`: original author, contributors and acknowledgements.
+- `SOURCE_URL` in `nrsp_bridge.py`, shown by `--version` and at start-up,
+  so anyone running a modified version over a network can point users at its
+  source as AGPL section 13 asks.
+
 ## [1.2.1] - 2026-11-18
 
 ### Added

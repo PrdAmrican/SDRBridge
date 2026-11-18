@@ -9,7 +9,12 @@ description = "Bridge SDRplay SDRconnect's WebSocket API (nRSP-ST etc.) to rtl_t
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "PrdAmrican" }]
-license = { text = "Proprietary - all rights reserved, see COPYRIGHT" }
+license = { text = "AGPL-3.0-only" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Ham Radio",
+]
 dependencies = ["numpy>=1.21", "websockets>=13"]
 
 [project.scripts]

@@ -201,9 +201,25 @@ runs the tests, bumps the version, commits, tags and pushes.
 * The rtl_tcp protocol has no authentication. Keep the ports inside your
   LAN or a VPN.
 
-## Copyright
+## Contributing
 
-Copyright (c) 2026 PrdAmrican. All rights reserved. See [COPYRIGHT](COPYRIGHT).
+Built something with SDRBridge, fixed a bug, or tried it with other radios
+or programs? Please share it - see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Copyright (C) 2026 PrdAmrican and SDRBridge contributors.
+
+SDRBridge is free software under the **GNU Affero General Public License,
+version 3** ([LICENSE](LICENSE)). In short: you may use, study, change and
+share it; if you share it, or a changed version, the copyright notices stay
+and the source goes along under the same licence. Because the bridge is
+network software, the AGPL also covers running a *changed* version for other
+people over a network: they must be able to get its source (set
+`SOURCE_URL` in `nrsp_bridge.py` to where yours is). It comes with no
+warranty.
 
 SDRplay, SDRconnect and nRSP-ST are trademarks of SDRplay Ltd. SDRBridge is an
 independent project, not affiliated with or endorsed by SDRplay Ltd.
+
+Developed with help from Claude (Anthropic).

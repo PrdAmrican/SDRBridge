@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
-# SDRBridge - Copyright (c) 2026 PrdAmrican. All rights reserved.
-# Proprietary and confidential. See COPYRIGHT for terms.
+# SDRBridge - Copyright (C) 2026 PrdAmrican and SDRBridge contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License version 3 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License
+# for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program (the LICENSE file). If not, see
+# <https://www.gnu.org/licenses/>.
 """
 nrsp_bridge.py - expose an SDRplay nRSP-ST (or any SDRplay radio) that is
 served through SDRconnect's WebSocket API (default port 5454) as:
@@ -39,8 +52,13 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.2.1"
-__copyright__ = "Copyright (c) 2026 PrdAmrican. All rights reserved."
+__version__ = "1.3.0"
+__copyright__ = "Copyright (C) 2026 PrdAmrican and SDRBridge contributors"
+__license__ = "AGPL-3.0-only"
+# AGPL section 13: if you run a MODIFIED version for users over a network,
+# you must offer them its source. Point this at where your version's source
+# can be downloaded; it is shown by --version and in the start-up log.
+SOURCE_URL = "https://github.com/PrdAmrican/SDRBridge"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -856,7 +874,8 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--probe", action="store_true",
                    help="check SDRconnect: print its properties, stream IQ for 5 s, report and exit")
     g.add_argument("-v", "--verbose", action="count", default=0)
-    g.add_argument("--version", action="version", version=f"%(prog)s {__version__}\n{__copyright__}")
+    g.add_argument("--version", action="version", version=f"SDRBridge {__version__} - {__copyright__}. "
+                   f"License: GNU AGPL v3 (see LICENSE); NO WARRANTY. Source: {SOURCE_URL}")
     return p
 
 
@@ -1014,7 +1033,7 @@ def main(argv=None):
     if args.verbose == 1:
         log.setLevel(logging.DEBUG)
         logging.getLogger("websockets").setLevel(logging.INFO)
-    log.info("SDRBridge %s - %s", __version__, __copyright__)
+    log.info("SDRBridge %s - %s - AGPL v3, no warranty - source: %s", __version__, __copyright__, SOURCE_URL)
     bridge = Bridge(args)
 
     async def runner():
