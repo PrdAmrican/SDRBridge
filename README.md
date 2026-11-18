@@ -200,3 +200,10 @@ runs the tests, bumps the version, commits, tags and pushes.
   wider captures.
 * The rtl_tcp protocol has no authentication. Keep the ports inside your
   LAN or a VPN.
+
+## Copyright
+
+Copyright (c) 2026 PrdAmrican. All rights reserved. See [COPYRIGHT](COPYRIGHT).
+
+SDRplay, SDRconnect and nRSP-ST are trademarks of SDRplay Ltd. SDRBridge is an
+independent project, not affiliated with or endorsed by SDRplay Ltd.

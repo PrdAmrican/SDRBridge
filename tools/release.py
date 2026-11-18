@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SDRBridge - Copyright (c) 2026 PrdAmrican. All rights reserved.
+# Proprietary and confidential. See COPYRIGHT for terms.
 """
 release.py - cut a new SDRBridge version.
 

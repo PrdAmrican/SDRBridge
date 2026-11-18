@@ -1,0 +1,16 @@
+SDRBridge
+Copyright (c) 2026 PrdAmrican. All rights reserved.
+
+This software and its source code are the property of PrdAmrican. No part of
+it may be copied, modified, distributed, sublicensed or used to create
+derivative works without the prior written permission of the copyright
+holder.
+
+The software is provided "as is", without warranty of any kind, express or
+implied. In no event shall the copyright holder be liable for any claim,
+damages or other liability arising from its use.
+
+Third-party components used at run time and NOT included here keep their
+own licences: Python, numpy (BSD-3-Clause), websockets (BSD-3-Clause).
+SDRplay, SDRconnect and nRSP-ST are trademarks of SDRplay Ltd. SDRBridge is
+an independent project and is not affiliated with or endorsed by SDRplay Ltd.

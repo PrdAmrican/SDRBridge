@@ -1,6 +1,7 @@
 @echo off
 rem ======================================================================
 rem  start-bridge.bat - start SDRBridge (nrsp_bridge.py) on Windows
+rem  Copyright (c) 2026 PrdAmrican. All rights reserved.
 rem
 rem  Double-click it, or run it from a Command Prompt. Anything you add
 rem  after the name is passed on to the bridge, e.g.

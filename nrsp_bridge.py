@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SDRBridge - Copyright (c) 2026 PrdAmrican. All rights reserved.
+# Proprietary and confidential. See COPYRIGHT for terms.
 """
 nrsp_bridge.py - expose an SDRplay nRSP-ST (or any SDRplay radio) that is
 served through SDRconnect's WebSocket API (default port 5454) as:
@@ -37,7 +39,8 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
+__copyright__ = "Copyright (c) 2026 PrdAmrican. All rights reserved."
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -853,7 +856,7 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--probe", action="store_true",
                    help="check SDRconnect: print its properties, stream IQ for 5 s, report and exit")
     g.add_argument("-v", "--verbose", action="count", default=0)
-    g.add_argument("--version", action="version", version=__version__)
+    g.add_argument("--version", action="version", version=f"%(prog)s {__version__}\n{__copyright__}")
     return p
 
 
@@ -1011,7 +1014,7 @@ def main(argv=None):
     if args.verbose == 1:
         log.setLevel(logging.DEBUG)
         logging.getLogger("websockets").setLevel(logging.INFO)
-    log.info("SDRBridge %s (nrsp_bridge.py)", __version__)
+    log.info("SDRBridge %s - %s", __version__, __copyright__)
     bridge = Bridge(args)
 
     async def runner():

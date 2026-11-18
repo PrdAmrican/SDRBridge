@@ -7,6 +7,13 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-18
+
+### Added
+- Copyright notice (Copyright (c) 2026 PrdAmrican. All rights reserved.) in every source file,
+  the Windows launcher, `--version` output, the start-up log line, the
+  README and a new `COPYRIGHT` file; author and licence in `pyproject.toml`.
+
 ## [1.2.0] - 2026-11-18
 
 ### Added
