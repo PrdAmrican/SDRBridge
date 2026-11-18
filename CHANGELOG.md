@@ -7,6 +7,23 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-18
+
+### Added
+- `--probe`: connects to SDRconnect, prints its properties and first raw
+  messages, streams IQ for 5 s and says whether IQ is flowing and why not.
+- Warning when an rtl_tcp client connects while the bridge is not connected
+  to SDRconnect.
+- Watchdog warning when IQ was requested but none arrives within 4 s, with
+  SDRconnect's started/can_control/device state.
+- Stats line shows SDRconnect connection state and binary frames by type;
+  printed every 10 s instead of 30 s.
+- Simulator options `--device-label` and `--no-iq` to reproduce faults.
+
+### Fixed
+- Messages whose `device` field was not exactly `primary` (e.g. `Primary`)
+  were silently discarded, so property answers never arrived.
+
 ## [1.0.0] - 2026-11-18
 
 First release.

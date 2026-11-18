@@ -27,7 +27,10 @@ ACCEPTED_RATES = [62_500, 125_000, 250_000, 500_000, 1_000_000,
 
 
 class FakeSDRconnect:
-    def __init__(self, tone_hz: float, tone_dbfs: float = -20.0):
+    def __init__(self, tone_hz: float, tone_dbfs: float = -20.0, device_label: str = "primary",
+                 no_iq: bool = False):
+        self.device_label = device_label
+        self.no_iq = no_iq
         self.tone_hz = tone_hz
         self.tone_amp = 10 ** (tone_dbfs / 20)
         self.props = {
@@ -53,7 +56,7 @@ class FakeSDRconnect:
 
     async def push(self, prop):
         msg = json.dumps({"event_type": "property_changed", "property": prop,
-                          "device": "primary", "value": self.props[prop]})
+                          "device": self.device_label, "value": self.props[prop]})
         for ws in list(self.clients):
             try:
                 await ws.send(msg)
@@ -70,7 +73,7 @@ class FakeSDRconnect:
                 et, prop, val = m["event_type"], m.get("property", ""), m.get("value", "")
                 if et == "get_property":
                     await ws.send(json.dumps({"event_type": "get_property_response", "property": prop,
-                                              "device": "primary", "value": self.props.get(prop, "")}))
+                                              "device": self.device_label, "value": self.props.get(prop, "")}))
                 elif et == "set_property":
                     if prop == "device_sample_rate" and int(float(val)) not in ACCEPTED_RATES:
                         continue  # refused silently, keeps old rate
@@ -104,7 +107,7 @@ class FakeSDRconnect:
             iq[1::2] = np.clip(x.imag, -32768, 32767)
             frame = struct.pack("<H", 2) + iq.tobytes()
             for ws in list(self.clients):
-                if getattr(ws, "iq_on", False):
+                if getattr(ws, "iq_on", False) and not self.no_iq:
                     try:
                         await ws.send(frame)
                     except Exception:
@@ -113,8 +116,9 @@ class FakeSDRconnect:
             await asyncio.sleep(max(0, t_next - loop.time()))
 
 
-async def run(port: int, tone: float, ready: asyncio.Event = None, holder: list = None):
-    fake = FakeSDRconnect(tone)
+async def run(port: int, tone: float, ready: asyncio.Event = None, holder: list = None,
+              device_label: str = "primary", no_iq: bool = False):
+    fake = FakeSDRconnect(tone, device_label=device_label, no_iq=no_iq)
     if holder is not None:
         holder.append(fake)
     async with serve(fake.handler, "127.0.0.1", port, max_size=None, compression=None):
@@ -128,6 +132,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=5454)
     ap.add_argument("--tone", type=float, default=100.1e6)
+    ap.add_argument("--device-label", default="primary", help="value of the 'device' field it sends")
+    ap.add_argument("--no-iq", action="store_true", help="never send IQ (simulates a stalled radio)")
     a = ap.parse_args()
     print(f"fake SDRconnect on ws://127.0.0.1:{a.port}, carrier at {a.tone/1e6:.4f} MHz")
-    asyncio.run(run(a.port, a.tone))
+    asyncio.run(run(a.port, a.tone, device_label=a.device_label, no_iq=a.no_iq))

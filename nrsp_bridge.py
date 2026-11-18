@@ -37,7 +37,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -203,6 +203,9 @@ class SDRconnect:
         self._waiters: dict[str, list[asyncio.Future]] = {}
         self._prop_events: dict[str, asyncio.Event] = {}
         self.frames = 0
+        self.frame_types: dict[int, int] = {}
+        self.raw_text: list[str] = []
+        self.iq_enabled_at = 0.0
         self.samples = 0
 
     # -- messaging ---------------------------------------------------------
@@ -241,7 +244,25 @@ class SDRconnect:
 
     async def set_iq_stream(self, enable: bool):
         self.iq_wanted = enable
+        if enable:
+            self.iq_enabled_at = time.monotonic()
+            asyncio.create_task(self._iq_watchdog(self.frames))
         await self._send("iq_stream_enable", "", "true" if enable else "false")
+
+    async def _iq_watchdog(self, frames_before: int):
+        """Explain loudly when IQ was asked for but none arrives."""
+        await asyncio.sleep(4)
+        if not self.iq_wanted or self.frames > frames_before or self.ws is None:
+            return
+        p = self.props
+        other = {t: n for t, n in self.frame_types.items() if t != self.iq_type}
+        log.warning(
+            "NO IQ from SDRconnect 4 s after enabling it. started=%s can_control=%s device=%r "
+            "rate=%s; other binary frames seen: %s. Check in SDRconnect that the nRSP-ST is "
+            "selected and playing, in Full IQ network mode, and that nothing else (another "
+            "client or the GUI) is holding it. 'python3 nrsp_bridge.py --probe' gives a full report.",
+            p.get("started", "?"), p.get("can_control", "?"), p.get("active_device", "?"),
+            p.get("device_sample_rate", "?"), other or "none")
 
     async def wait_for_value(self, prop: str, pred, timeout: float) -> Optional[str]:
         """Wait until property `prop` satisfies pred (from push or poll)."""
@@ -255,13 +276,15 @@ class SDRconnect:
 
     # -- receive -----------------------------------------------------------
     def _handle_text(self, text: str):
+        if len(self.raw_text) < 20:
+            self.raw_text.append(text)
         try:
             msg = json.loads(text)
         except ValueError:
             log.warning("non-JSON text from SDRconnect: %r", text[:200])
             return
-        dev = msg.get("device", "primary") or "primary"
-        if dev != self.device:
+        dev = str(msg.get("device") or "primary").strip().lower()
+        if dev not in (self.device, "", "0" if self.device == "primary" else "1"):
             return
         et, prop, val = msg.get("event_type"), msg.get("property", ""), msg.get("value", "")
         if et in ("property_changed", "get_property_response") and prop:
@@ -282,6 +305,7 @@ class SDRconnect:
         if len(data) < 2:
             return
         (ptype,) = struct.unpack_from("<H", data, 0)
+        self.frame_types[ptype] = self.frame_types.get(ptype, 0) + 1
         if ptype != self.iq_type:
             return
         n = (len(data) - 2) // 4 * 4
@@ -607,6 +631,10 @@ class Bridge:
             self.controller = c
         role = "control" if (self.args.control == "all" or c is self.controller) else "listen-only"
         log.info("rtl_tcp client %s connected (%s)", c.peer, role)
+        if not self.sdr.connected.is_set():
+            log.warning("...but the bridge is NOT connected to SDRconnect at %s, so there will be no "
+                        "samples and tuning/gain go nowhere until it is. Is SDRconnect running with its "
+                        "WebSocket server switched on, and is -s the right address?", self.sdr.url)
         writer.write(b"RTL0" + struct.pack(">II", RTLSDR_TUNER_R820T, len(R820T_GAINS)))
         self.rtl_clients.append(c)
         await self._update_streaming()
@@ -651,7 +679,9 @@ class Bridge:
             await asyncio.sleep(self.args.stats)
             dt = time.monotonic() - self._rx_t0
             rate = self._rx_count / dt if dt > 0 else 0
-            msg = (f"stats: in {rate:,.0f} S/s (expected {self.device_rate:,.0f}), "
+            up = "connected" if self.sdr.connected.is_set() else "NOT CONNECTED"
+            msg = (f"stats: SDRconnect {up}, frames by type {self.sdr.frame_types or '{}'}, "
+                   f"in {rate:,.0f} S/s (expected {self.device_rate:,.0f}), "
                    f"rtl_tcp clients {len(self.rtl_clients)}, raw clients {len(self.raw_clients)}, "
                    f"digital gain {self.gain.db:.1f} dB")
             if self.sdr.iq_wanted and dt > 3 and rate < 0.9 * self.device_rate:
@@ -774,14 +804,63 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--queue-blocks", type=int, default=64, help="per-client buffer depth in blocks")
 
     g = p.add_argument_group("misc")
-    g.add_argument("--stats", type=float, default=30, help="seconds between status lines (0 = off)")
+    g.add_argument("--stats", type=float, default=10, help="seconds between status lines (0 = off)")
+    g.add_argument("--probe", action="store_true",
+                   help="check SDRconnect: print its properties, stream IQ for 5 s, report and exit")
     g.add_argument("-v", "--verbose", action="count", default=0)
     g.add_argument("--version", action="version", version=__version__)
     return p
 
 
+async def probe(args) -> int:
+    """Stand-alone health check of the SDRconnect side."""
+    sdr = SDRconnect(args, lambda iq: None)
+    task = asyncio.create_task(sdr.run())
+    print(f"connecting to {sdr.url} ...")
+    try:
+        await asyncio.wait_for(sdr.connected.wait(), 8)
+    except asyncio.TimeoutError:
+        print("FAIL: could not connect. Is SDRconnect running, is its WebSocket server switched on "
+              "(Settings), is the address/port right, and is the firewall open for port 5454?")
+        task.cancel()
+        return 1
+    print("OK: connected\n\nproperties:")
+    for prop in ("api_version", "valid_devices", "active_device", "started", "can_control",
+                 "device_center_frequency", "device_sample_rate", "lna_state", "lna_state_min",
+                 "lna_state_max", "valid_antennas", "active_antenna", "overload"):
+        v = await sdr.get(prop, timeout=2.0)
+        print(f"  {prop:24s} {v if v is not None else '(no answer)'}")
+    raw = [m for m in sdr.raw_text[:8]]
+    if raw:
+        print("\nfirst messages received from SDRconnect (raw):")
+        for m in raw:
+            print("  " + m[:200])
+    print("\nenabling IQ for 5 seconds ...")
+    await sdr.set_iq_stream(True)
+    sdr.frame_types.clear()
+    s0, t0 = sdr.samples, time.monotonic()
+    await asyncio.sleep(5)
+    rate = (sdr.samples - s0) / (time.monotonic() - t0)
+    await sdr.set_iq_stream(False)
+    print(f"  binary frames by type: {sdr.frame_types or 'none'}  (2 = IQ, 1 = audio, 3 = spectrum)")
+    print(f"  IQ rate: {rate:,.0f} S/s (SDRconnect says {sdr.props.get('device_sample_rate')})")
+    ok = rate > 0
+    if not ok:
+        print("FAIL: no IQ. In SDRconnect make sure the nRSP-ST is selected and PLAYING (press play), "
+              "in Full IQ network mode, and that can_control above is true.")
+    elif sdr.props.get("device_sample_rate") and rate < 0.9 * float(sdr.props["device_sample_rate"]):
+        print("WARN: IQ slower than the sample rate - network too slow or not in Full IQ mode")
+    else:
+        print("OK: IQ is flowing - the bridge should work")
+    task.cancel()
+    return 0 if ok else 2
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.probe:
+        logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
+        return asyncio.run(probe(args))
     logging.basicConfig(level=logging.DEBUG if args.verbose > 1 else logging.INFO,
                         format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
     if args.verbose == 1:
