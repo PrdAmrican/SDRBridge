@@ -37,7 +37,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -206,6 +206,7 @@ class SDRconnect:
         self.frame_types: dict[int, int] = {}
         self.raw_text: list[str] = []
         self.last_error = ""
+        self.ws_opened = False
         self.iq_enabled_at = 0.0
         self.samples = 0
 
@@ -334,7 +335,9 @@ class SDRconnect:
                   "lna_state_min", "lna_state_max", "valid_antennas",
                   "active_antenna", "device_sample_rate", "device_center_frequency",
                   "lna_state", "started"):
-            await self.get(p, timeout=2.0)
+            v = await self.get(p, timeout=2.0)
+            if v is None and self.speaks_other_protocol():
+                return  # not the SDRconnect API; run() explains
         log.info("SDRconnect API %s, device '%s', antennas [%s], LNA %s..%s, can_control=%s",
                  self.props.get("api_version", "?"), self.props.get("active_device", "?"),
                  self.props.get("valid_antennas", "?"), self.props.get("lna_state_min", "?"),
@@ -357,11 +360,20 @@ class SDRconnect:
                                       ping_timeout=20, open_timeout=10,
                                       compression=None) as ws:
                     self.ws = ws
+                    self.ws_opened = True
                     backoff = 1.0
                     reader = asyncio.create_task(self._reader(ws))
                     await self._on_connect()
+                    if self.speaks_other_protocol():
+                        log.error("%s accepted the WebSocket but speaks a different, binary protocol - "
+                                  "not the SDRconnect WebSocket API. If this is the nRSP-ST's own web-client "
+                                  "port (e.g. 9001), point the bridge at SDRconnect instead (port 5454, "
+                                  "WebSocket switched on in SDRconnect's Settings).", self.url)
                     self.connected.set()
-                    await reader
+                    try:
+                        await reader
+                    finally:
+                        reader.cancel()
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -380,11 +392,20 @@ class SDRconnect:
             backoff = min(backoff * 2, 5)
 
     async def _reader(self, ws):
-        async for msg in ws:
-            if isinstance(msg, (bytes, bytearray, memoryview)):
-                self._handle_binary(bytes(msg))
-            else:
-                self._handle_text(msg)
+        try:
+            async for msg in ws:
+                if isinstance(msg, (bytes, bytearray, memoryview)):
+                    self._handle_binary(bytes(msg))
+                else:
+                    self._handle_text(msg)
+        except Exception as e:  # closed by the far end; run() reconnects
+            self.last_error = f"{type(e).__name__}: {e}"
+
+    def speaks_other_protocol(self) -> bool:
+        """True when the peer accepted the WebSocket but never sent the API's
+        JSON, only binary frames whose type tag is not one of the API's."""
+        unknown = {t for t in self.frame_types if t not in (1, 2, 3, 4, 5, 6)}
+        return self.ws_opened and not self.raw_text and bool(unknown)
 
 
 # ---------------------------------------------------------------------------
@@ -912,6 +933,13 @@ async def probe(args) -> int:
         await asyncio.wait_for(sdr.connected.wait(), 8)
     except asyncio.TimeoutError:
         task.cancel()
+        if sdr.speaks_other_protocol():
+            print(f"FAIL: {sdr.url} accepts a WebSocket but speaks a different, binary protocol\n"
+                  f"  (frame tags seen: {sorted(sdr.frame_types)[:8]}...), not the SDRconnect WebSocket API.\n"
+                  "  The nRSP-ST's own web-client port (9001) is like this. Run SDRconnect, connect it to\n"
+                  "  the nRSP-ST, switch on Settings > WebSocket, and point the bridge at SDRconnect\n"
+                  "  (default port 5454) instead.")
+            return 1
         print(f"FAIL: no WebSocket API answer at {sdr.url}")
         if sdr.last_error:
             print(f"  reason: {sdr.last_error}")

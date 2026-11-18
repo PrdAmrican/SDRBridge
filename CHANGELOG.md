@@ -7,6 +7,15 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-11-18
+
+### Fixed
+- Recognise a WebSocket that speaks a different (binary) protocol, such as
+  the nRSP-ST's built-in web-client port 9001, and say so plainly in both
+  `--probe` and normal mode instead of a generic failure.
+- No more "Task exception was never retrieved" traceback when the far end
+  closes the WebSocket.
+
 ## [1.1.1] - 2026-11-18
 
 ### Changed
