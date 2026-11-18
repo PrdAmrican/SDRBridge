@@ -37,7 +37,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -736,14 +736,28 @@ class Bridge:
 
         tasks = [asyncio.create_task(self.sdr.run())]
         servers = []
+
+        async def listen(handler, port, what):
+            try:
+                srv = await asyncio.start_server(handler, a.bind, port)
+            except OSError as e:
+                raise SystemExit(
+                    f"\nERROR: cannot open {what} port {port}: {e.strerror or e}.\n"
+                    f"Another program is already using it - most likely an earlier copy of this bridge "
+                    f"still running in another window. Close it, or pick another port (see --help).\n"
+                    f"  Windows:     Get-Process -Id (Get-NetTCPConnection -LocalPort {port} -State Listen).OwningProcess\n"
+                    f"  Linux/macOS: lsof -i :{port}")
+            servers.append(srv)
+            return srv
+
         if a.rtl_port:
-            servers.append(await asyncio.start_server(self.rtl_session, a.bind, a.rtl_port))
+            await listen(self.rtl_session, a.rtl_port, "rtl_tcp")
             log.info("rtl_tcp server listening on %s:%d", a.bind, a.rtl_port)
         if a.soapy_port:
-            servers.append(await asyncio.start_server(self.soapy_session, a.bind, a.soapy_port))
+            await listen(self.soapy_session, a.soapy_port, "SoapySDR rtl_tcp")
             log.info("rtl_tcp for SoapyRTLTCP (I/Q pre-swapped) listening on %s:%d", a.bind, a.soapy_port)
         if a.raw_port:
-            servers.append(await asyncio.start_server(self.raw_session, a.bind, a.raw_port))
+            await listen(self.raw_session, a.raw_port, "raw IQ")
             log.info("raw %s IQ server listening on %s:%d", a.raw_format, a.bind, a.raw_port)
         if a.stats:
             tasks.append(asyncio.create_task(self.stats()))

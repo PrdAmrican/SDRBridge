@@ -7,6 +7,13 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-18
+
+### Fixed
+- When a listening port is already in use (typically an earlier copy of the
+  bridge still running), exit with a plain explanation and the command to
+  find the other program, instead of a traceback.
+
 ## [1.1.2] - 2026-11-18
 
 ### Fixed
