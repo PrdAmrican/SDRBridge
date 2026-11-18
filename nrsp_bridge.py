@@ -375,7 +375,7 @@ class SDRconnect:
                 self._waiters.clear()
             log.info("reconnecting in %.0f s (is SDRconnect running with its WebSocket server switched on?)", backoff)
             await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, 30)
+            backoff = min(backoff * 2, 5)
 
     async def _reader(self, ws):
         async for msg in ws:

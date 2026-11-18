@@ -23,6 +23,8 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 ### Fixed
 - Messages whose `device` field was not exactly `primary` (e.g. `Primary`)
   were silently discarded, so property answers never arrived.
+- Reconnect attempts to SDRconnect now retry at most every 5 s (was 30 s),
+  so the bridge picks SDRconnect up quickly once it is started.
 
 ## [1.0.0] - 2026-11-18
 
