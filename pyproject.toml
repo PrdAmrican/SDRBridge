@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdrbridge"
+dynamic = ["version"]
+description = "Bridge SDRplay SDRconnect's WebSocket API (nRSP-ST etc.) to rtl_tcp, SoapySDR and raw IQ"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21", "websockets>=13"]
+
+[project.scripts]
+sdrbridge = "nrsp_bridge:main"
+
+[tool.setuptools]
+py-modules = ["nrsp_bridge"]
+
+[tool.setuptools.dynamic]
+# The one place the version lives is __version__ in nrsp_bridge.py.
+version = { attr = "nrsp_bridge.__version__" }
