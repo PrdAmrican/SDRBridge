@@ -7,6 +7,15 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-18
+
+### Changed
+- `--probe` now prints the real connection error, and when the target does
+  not answer like SDRconnect it investigates the port: TCP reachability,
+  the web page and its scripts (WebSocket URLs and message names), and
+  WebSocket paths, printing what each one sends. Used to work out the
+  nRSP-ST's built-in web-client port (9001).
+
 ## [1.1.0] - 2026-11-18
 
 ### Added

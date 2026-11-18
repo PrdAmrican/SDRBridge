@@ -37,7 +37,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 log = logging.getLogger("nrsp-bridge")
 
 # ---------------------------------------------------------------------------
@@ -205,6 +205,7 @@ class SDRconnect:
         self.frames = 0
         self.frame_types: dict[int, int] = {}
         self.raw_text: list[str] = []
+        self.last_error = ""
         self.iq_enabled_at = 0.0
         self.samples = 0
 
@@ -364,7 +365,8 @@ class SDRconnect:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                log.warning("SDRconnect connection problem: %s", e)
+                self.last_error = f"{type(e).__name__}: {e}"
+                log.warning("SDRconnect connection problem: %s", self.last_error)
             finally:
                 self.ws = None
                 self.connected.clear()
@@ -812,6 +814,95 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+async def discover(url: str):
+    """Work out what is listening on a port that did not answer like SDRconnect:
+    is it a web server, which WebSocket paths accept a connection, what do
+    they send, and which WebSocket URLs/messages appear in the page's scripts."""
+    import re
+    import urllib.request
+    from urllib.parse import urlsplit, urljoin
+
+    u = urlsplit(url)
+    hostport = u.netloc
+    http_base = f"http://{hostport}/"
+
+    print(f"[1] TCP connect to {hostport}")
+    try:
+        r, w = await asyncio.wait_for(asyncio.open_connection(u.hostname, u.port), 4)
+        w.close()
+        print("    OK: something is listening")
+    except Exception as e:
+        print(f"    FAIL: {type(e).__name__}: {e}  -> nothing reachable there (wrong IP/port, "
+              "device off, or firewall)")
+        return
+
+    print(f"[2] HTTP GET {http_base}")
+    page, scripts = "", []
+    try:
+        def fetch(x, limit=2_000_000):
+            req = urllib.request.Request(x, headers={"User-Agent": "SDRBridge-probe"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return resp.status, resp.headers.get("Content-Type", ""), resp.read(limit).decode("utf-8", "replace")
+        st, ct, page = await asyncio.to_thread(fetch, http_base)
+        title = re.search(r"<title>(.*?)</title>", page, re.S | re.I)
+        print(f"    HTTP {st}, {ct}, {len(page)} bytes, title: {title.group(1).strip() if title else '-'}")
+        scripts = [urljoin(http_base, m) for m in re.findall(r'<script[^>]+src=["\']([^"\']+)', page, re.I)]
+    except Exception as e:
+        print(f"    not a plain web page ({type(e).__name__}: {e})")
+
+    hints, paths = set(), set()
+    texts = [("page", page)]
+    for sc in scripts[:15]:
+        try:
+            _, _, js = await asyncio.to_thread(fetch, sc)
+            texts.append((sc, js))
+        except Exception:
+            pass
+    pat = re.compile(r'(wss?://[^"\'`\s]{0,120}|new WebSocket\([^)]{0,160}\)|["\'`]/[A-Za-z0-9_./-]{1,40}(?:ws|socket|stream|api)[A-Za-z0-9_./-]{0,30}["\'`]'
+                     r'|event_type|get_property|set_property|iq_stream_enable|binaryType\s*=\s*["\'][a-z]+)', re.I)
+    for name, t in texts:
+        for m in pat.findall(t):
+            hints.add(m[:160])
+        for pm in re.findall(r'["\'`](/[A-Za-z0-9_./-]{0,40}(?:ws|socket|stream|api|websocket)[A-Za-z0-9_./-]{0,30})["\'`]', t, re.I):
+            paths.add(pm)
+        for pm in re.findall(r'wss?://[^/"\'`\s]*(/[A-Za-z0-9_./-]{1,60})', t):
+            paths.add(pm)
+    if len(texts) > 1 or page:
+        print(f"[3] scanned page + {len(texts) - 1} script(s) for WebSocket clues")
+        for h in sorted(hints)[:40]:
+            print("    " + h)
+        if not hints:
+            print("    none found")
+
+    print("[4] trying WebSocket paths")
+    found = False
+    for path in ["/", "/ws", "/websocket", "/socket", "/api", "/stream", "/ws/", *sorted(paths)][:20]:
+        wurl = f"ws://{hostport}{path}"
+        try:
+            async with ws_connect(wurl, open_timeout=4, max_size=None, compression=None) as ws:
+                found = True
+                print(f"    {wurl}: CONNECTED")
+                await ws.send(json.dumps({"event_type": "get_property", "property": "api_version", "value": ""}))
+                t_end = time.monotonic() + 3
+                n = 0
+                while time.monotonic() < t_end and n < 6:
+                    try:
+                        m = await asyncio.wait_for(ws.recv(), max(0.1, t_end - time.monotonic()))
+                    except asyncio.TimeoutError:
+                        break
+                    n += 1
+                    if isinstance(m, (bytes, bytearray)):
+                        print(f"      binary {len(m)} bytes, first 24: {bytes(m[:24]).hex(' ')}")
+                    else:
+                        print(f"      text: {m[:300]}")
+                if n == 0:
+                    print("      (connected, but it sent nothing in 3 s)")
+        except Exception as e:
+            print(f"    {wurl}: {type(e).__name__}: {str(e)[:120]}")
+    print("\nPlease send this whole output to whoever is helping you with SDRBridge." if found or hints
+          else "\nNo WebSocket found on this port.")
+
+
 async def probe(args) -> int:
     """Stand-alone health check of the SDRconnect side."""
     sdr = SDRconnect(args, lambda iq: None)
@@ -820,9 +911,13 @@ async def probe(args) -> int:
     try:
         await asyncio.wait_for(sdr.connected.wait(), 8)
     except asyncio.TimeoutError:
-        print("FAIL: could not connect. Is SDRconnect running, is its WebSocket server switched on "
-              "(Settings), is the address/port right, and is the firewall open for port 5454?")
         task.cancel()
+        print(f"FAIL: no WebSocket API answer at {sdr.url}")
+        if sdr.last_error:
+            print(f"  reason: {sdr.last_error}")
+        print("  If this is SDRconnect, switch its WebSocket server on in Settings and check the port\n"
+              "  (default 5454) and firewall. Investigating what is on that port instead...\n")
+        await discover(sdr.url)
         return 1
     print("OK: connected\n\nproperties:")
     for prop in ("api_version", "valid_devices", "active_device", "started", "can_control",
