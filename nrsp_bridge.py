@@ -369,6 +369,10 @@ class SDRconnect:
                                   "not the SDRconnect WebSocket API. If this is the nRSP-ST's own web-client "
                                   "port (e.g. 9001), point the bridge at SDRconnect instead (port 5454, "
                                   "WebSocket switched on in SDRconnect's Settings).", self.url)
+                        reader.cancel()
+                        await ws.close()
+                        await asyncio.sleep(25)  # plus the normal backoff below
+                        continue
                     self.connected.set()
                     try:
                         await reader
@@ -568,8 +572,12 @@ class Bridge:
                 self.device_rate = got
                 self._device_rate_for[want] = got
                 self._configure_resampler()
-                # let frames already queued at the old rate drain past us
+                # let frames already in flight at the old rate drain past us, then drop
+                # anything still queued for clients so nobody gets old-rate samples
                 await asyncio.sleep(0.1)
+                for c in self.rtl_clients:
+                    while not c.q.empty():
+                        c.q.get_nowait()
             finally:
                 self.holding = False
             self._rx_count, self._rx_t0 = 0, time.monotonic()

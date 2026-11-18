@@ -15,6 +15,8 @@ fixes. Each release is tagged `vX.Y.Z` in git.
   `--probe` and normal mode instead of a generic failure.
 - No more "Task exception was never retrieved" traceback when the far end
   closes the WebSocket.
+- After a sample-rate change, samples still queued for a client at the old
+  rate are dropped, so clients never see a burst at the wrong rate.
 
 ## [1.1.1] - 2026-11-18
 
