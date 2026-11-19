@@ -73,18 +73,82 @@ Then point your SDR program at the bridge's address:
 | **rtl_433** | `rtl_433 -d rtl_tcp:192.168.1.20:1234` |
 | **OpenWebRX** | SDR device type *RTL-SDR (rtl_tcp)*, port 1234 |
 | **welle.io** | `welle-cli -F rtl_tcp,192.168.1.20:1234` |
-| **SoapySDR apps** (CubicSDR, SDRangel, Pothos, Python/C++ SoapySDR, rtl_433 -d soapy) | Install the **SoapyRTLTCP** module, then use device string `driver=rtltcp,rtltcp=192.168.1.20:1236` (note port **1236**) |
+| **SoapySDR apps** (CubicSDR, SDRangel, Pothos, Python/C++ SoapySDR, rtl_433 -d soapy) | Install the **SoapyRTLTCP** module (see [Using SoapySDR](#using-soapysdr)), then use device string `driver=rtltcp,rtltcp=192.168.1.20:PORT`, where PORT is **1234** on Windows (radioconda) or **1236** on Linux/macOS. `tools/check_soapy.py` tells you which |
 | **GNU Radio** | *osmocom Source* with `rtl_tcp=192.168.1.20:1234`, or *TCP Source* on port 1235 for 16-bit `short` IQ (interleaved, device rate) |
 | **csdr / scripts** | `nc 192.168.1.20 1235 > capture.cs16` |
 
-### Why a separate SoapySDR port?
+## Using SoapySDR
 
-SoapyRTLTCP has a bug: it tests a macro (`__LITTLE_ENDIAN__`) that GCC/Clang
-on Linux do not define, so on ordinary x86/ARM machines it swaps I and Q
-whenever an app reads CF32/CS16 samples (which is nearly always). The
-spectrum comes out mirrored. Port 1236 sends I/Q pre-swapped so the two
-swaps cancel. If your app reads CS8, or lets you set the module's
-`iq_swap` setting, use port 1234 instead.
+Most SDR programs speak rtl_tcp directly, so check yours before
+installing anything: SDR++, SDR#, SDR Console, GQRX, rtl_433, SDRangel and
+GNU Radio (osmocom) all do. SoapySDR is mainly needed for CubicSDR and for
+your own Python or C++ programs.
+
+SoapySDR reaches the bridge through the **SoapyRTLTCP** module. The module
+only works with programs that use the same SoapySDR installation it was
+installed into.
+
+### Windows (radioconda)
+
+No ready-made Windows build of SoapyRTLTCP exists: PothosSDR doesn't include
+it, and conda-forge has no package for it. So it is built from source, once,
+into a radioconda installation:
+
+1. Install **Visual Studio 2022 Build Tools** with the **Desktop development
+   with C++** workload.
+2. Install **radioconda** for Windows from
+   <https://github.com/ryanvolz/radioconda/releases> (default location
+   `%USERPROFILE%\radioconda`). It includes SoapySDR, its Python bindings,
+   `SoapySDRUtil`, GNU Radio and more.
+3. Open **x64 Native Tools Command Prompt for VS 2022** from the Start menu,
+   then run:
+   ```
+   call %USERPROFILE%\radioconda\Scripts\activate.bat
+   conda install -y cmake ninja git
+   cd %USERPROFILE%
+   git clone https://github.com/pothosware/SoapyRTLTCP
+   cd SoapyRTLTCP
+   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+         -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%\Library ^
+         -DCMAKE_PREFIX_PATH=%CONDA_PREFIX%\Library
+   cmake --build build
+   cmake --install build
+   ```
+4. Check it loaded: `SoapySDRUtil --info` should list `rtltcp` under
+   *Available factories*.
+5. From the same prompt, in the SDRBridge folder, run
+   `python tools\check_soapy.py`. It needs no radio, and says which port
+   to use.
+
+### Linux and macOS
+
+Debian, Ubuntu and Raspberry Pi OS:
+```
+sudo apt install soapysdr-tools libsoapysdr-dev cmake g++ git
+git clone https://github.com/pothosware/SoapyRTLTCP
+cd SoapyRTLTCP && cmake -S . -B build && cmake --build build && sudo cmake --install build
+sudo ldconfig
+SoapySDRUtil --info          # should list rtltcp
+python3 tools/check_soapy.py # from the SDRBridge folder; needs python3-soapysdr
+```
+On macOS, install SoapySDR with Homebrew (`brew install soapysdr`), then
+build the module the same way.
+
+### Which port: 1234 or 1236?
+
+SoapyRTLTCP picks its I/Q byte order with a compiler test that only works
+with Microsoft's compiler. Builds made with GCC or Clang (Linux, macOS, and
+MinGW on Windows) swap I and Q, so the spectrum comes out mirrored. Port
+1236 sends I/Q pre-swapped to cancel that out.
+
+| SoapyRTLTCP built with | Use port |
+|---|---|
+| Microsoft Visual C++ (the Windows radioconda steps above) | **1234** |
+| GCC or Clang (Linux, macOS, MinGW) | **1236** |
+
+If in doubt, `tools/check_soapy.py` measures it. Or tune just off a
+known station: if it appears on the wrong side of the centre, switch ports.
+Apps that read 8-bit samples (`CS8`) aren't affected and should use 1234.
 
 A second SoapyRTLTCP quirk: its plain `setGain(value)` sends dB where
 rtl_tcp expects tenths of dB, so gain comes out 10× too low. Set the named

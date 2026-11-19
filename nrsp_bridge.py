@@ -52,7 +52,7 @@ try:  # websockets >= 13
 except ImportError:  # pragma: no cover - older websockets
     from websockets import connect as ws_connect  # type: ignore
 
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 __copyright__ = "Copyright (C) 2026 PrdAmrican and SDRBridge contributors"
 __license__ = "AGPL-3.0-only"
 # AGPL section 13: if you run a MODIFIED version for users over a network,
@@ -857,8 +857,8 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("-b", "--bind", default="0.0.0.0", help="address to listen on")
     g.add_argument("-p", "--rtl-port", type=int, default=1234, help="rtl_tcp port (0 = off)")
     g.add_argument("--soapy-port", type=int, default=1236,
-                   help="rtl_tcp port with I/Q pre-swapped to cancel SoapyRTLTCP's swap bug on "
-                        "little-endian Linux/macOS when apps read CF32/CS16 (0 = off)")
+                   help="rtl_tcp port with I/Q pre-swapped to cancel the swap bug of SoapyRTLTCP built "
+                        "with GCC/Clang (Linux, macOS). MSVC builds on Windows use the normal port (0 = off)")
     g.add_argument("--raw-port", type=int, default=1235, help="raw IQ port (0 = off)")
     g.add_argument("--raw-format", choices=["cs16", "cu8"], default="cs16", help="raw port sample format")
     g.add_argument("--control", choices=["all", "first", "none"], default="all",

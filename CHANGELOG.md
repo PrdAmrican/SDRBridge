@@ -7,6 +7,20 @@ fixes. Each release is tagged `vX.Y.Z` in git.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-19
+
+### Added
+- `tools/check_soapy.py`: checks that SoapySDR and SoapyRTLTCP are installed
+  and work with SDRBridge, and measures which port (1234 or 1236) gives a
+  correct spectrum on this machine, using the simulator and no radio.
+- README "Using SoapySDR": building SoapyRTLTCP on Windows with radioconda
+  and Visual Studio Build Tools, and on Linux/macOS.
+
+### Fixed
+- Documentation: SoapyRTLTCP's I/Q swap bug only affects GCC/Clang builds.
+  Windows builds made with Microsoft's compiler (as with radioconda) are
+  correct and must use port 1234, not 1236.
+
 ## [1.3.1] - 2026-11-18
 
 ### Added
